@@ -168,7 +168,7 @@ mod tests {
             items: [("title".to_owned(), d_opt)].into_iter().collect(),
         };
 
-        let extract = extract_fragment(
+        let extract = extract_document(
             r#"
 <!DOCTYPE html>
 <div class="parent"> Hello, <h2>world!</h2> </div>
@@ -202,7 +202,7 @@ mod tests {
             regex: None,
             items: Default::default(),
         };
-        let extract = extract_fragment(
+        let extract = extract_document(
             r#"
 <!DOCTYPE html>
 <div class="parent"> Hello, <h2>world!</h2> </div>
@@ -237,7 +237,7 @@ mod tests {
             regex: Some("(.*?), (.*?)!".to_owned()),
             items: Default::default(),
         };
-        let extract = extract_fragment(
+        let extract = extract_document(
             r#"
 <!DOCTYPE html>
 <div class="parent"> Hello, <h2>world!</h2> </div>
