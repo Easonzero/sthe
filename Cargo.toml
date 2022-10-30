@@ -1,0 +1,19 @@
+[package]
+name = "sthe"
+version = "0.1.0"
+authors = ["easonzero"]
+edition = "2021"
+description = "A library to provide an easy way to extract data from HTML."
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+regex = "1.6.0"
+scraper = "0.13.0"
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+toml = "0.5.9"
+
