@@ -3,6 +3,11 @@ url = "https://news.ycombinator.com/news"
 [items]
 selector = "tr.athing"
 
+[items.rank]
+selector = "span.rank"
+target = "text"
+regex = "(^\\d+)."
+
 [items.title]
 selector = "span.titleline>a"
 target = "text"

@@ -78,14 +78,17 @@ fn extract_elem(elem: ElementRef, opt: &ExtractOptCompled) -> Extract {
             })
             .and_then(|text| {
                 Some(if let Some(regex) = opt.regex.as_ref() {
-                    ExtractText::TextList(
-                        regex
-                            .captures(&text.trim())?
-                            .iter()
-                            .skip(1)
-                            .flat_map(|x| x.map(|x| x.as_str().to_owned()))
-                            .collect(),
-                    )
+                    let captures: Vec<_> = regex
+                        .captures(&text.trim())?
+                        .iter()
+                        .skip(1)
+                        .flat_map(|x| x.map(|x| x.as_str().to_owned()))
+                        .collect();
+                    if captures.len() == 1 {
+                        ExtractText::Text(captures.into_iter().next().unwrap())
+                    } else {
+                        ExtractText::TextList(captures)
+                    }
                 } else {
                     ExtractText::Text(text.trim().to_owned())
                 })
