@@ -6,18 +6,11 @@ use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Deserialize)]
-#[serde(tag = "type", content = "index")]
-pub enum Label {
-    Text,
-    Attr(String),
-}
-
 /// The configurable option for extracting
 #[derive(Deserialize)]
 pub struct ExtractOpt {
     #[serde(default)]
-    pub label: Option<Label>,
+    pub target: Option<String>,
     pub selector: String,
     #[serde(default)]
     pub regex: Option<String>,
@@ -26,7 +19,7 @@ pub struct ExtractOpt {
 }
 
 pub struct ExtractOptCompled {
-    pub label: Option<Label>,
+    pub target: Option<String>,
     pub selector: Selector,
     pub regex: Option<Regex>,
     pub items: HashMap<String, ExtractOptCompled>,
@@ -35,7 +28,7 @@ pub struct ExtractOptCompled {
 impl ExtractOpt {
     pub fn compile(self) -> Result<ExtractOptCompled> {
         Ok(ExtractOptCompled {
-            label: self.label,
+            target: self.target,
             selector: Selector::parse(&self.selector).map_err(|e| anyhow!("{:?}", e))?,
             regex: self.regex.map(|x| Regex::new(&x)).transpose()?,
             items: self
@@ -77,11 +70,11 @@ fn extract_elem(elem: ElementRef, opt: &ExtractOptCompled) -> Extract {
     let mut extract_items = vec![];
     for elem in select {
         let text = opt
-            .label
+            .target
             .as_ref()
-            .and_then(|label| match label {
-                Label::Text => Some(elem.text().collect::<Vec<_>>().join("")),
-                Label::Attr(k) => elem.value().attr(k).map(|x| x.to_owned()),
+            .and_then(|target| match target.as_str() {
+                "text" => Some(elem.text().collect::<Vec<_>>().join("")),
+                attr => elem.value().attr(attr).map(|x| x.to_owned()),
             })
             .and_then(|text| {
                 Some(if let Some(regex) = opt.regex.as_ref() {
@@ -148,7 +141,7 @@ mod tests {
         test_case! {
             html:"<a href=\"www.xxx.com\">",
             opt:r#"
-                label = { type="Attr", index="href" }
+                target = "href"
                 selector = "a"
             "#,
             expect:"text = \"www.xxx.com\""
@@ -166,7 +159,7 @@ mod tests {
                 selector = ".parent"
 
                 [title]
-                label = { type="Text" }
+                target = "text"
                 selector = "h2"
             "#,
             expect: r#"
@@ -186,7 +179,7 @@ mod tests {
                 selector = ".parent"
 
                 [title]
-                label = { type="Text" }
+                target = "text"
                 selector = "h2"
             "#,
             expect: r#"
@@ -207,7 +200,7 @@ mod tests {
 <div class="parent"> Hello, <h2>world!</h2> </div>
             "#,
             opt: r#"
-                label = { type = "Text" }
+                target = "text"
                 selector = ".parent"
                 regex = "(.*?), (.*?)!"
             "#,

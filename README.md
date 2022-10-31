@@ -6,7 +6,7 @@ A library to provide an easy way to extract data from HTML.
 ```rust
 // build extract option by toml
 let opt: ExtractOpt = toml::from_str(r#"
-  label = { type="Attr", index="href" }
+  target = "href"
   selector = "a"
 "#).unwrap();
 
