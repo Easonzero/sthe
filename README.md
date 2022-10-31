@@ -19,3 +19,5 @@ let expect_value = toml::from_str("text = \"www.xxx.com\"").unwrap();
 
 assert_eq!(extract_value, expect_value);
 ```
+
+see also [examples/crawler.rs](examples/crawler.rs), run by `cargo run --example crawler -- -c examples/opt.toml`.

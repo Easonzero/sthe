@@ -1,0 +1,13 @@
+url = "https://news.ycombinator.com/news"
+
+[items]
+selector = "tr.athing"
+
+[items.title]
+selector = "span.titleline>a"
+target = "text"
+
+[items.link]
+selector = "span.titleline>a"
+target = "href"
+
