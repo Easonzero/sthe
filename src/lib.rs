@@ -137,7 +137,6 @@ mod tests {
         (html:$html: literal, opt:$opt: literal, expect:$expect: literal) => {
             let opt: ExtractOpt = toml::from_str($opt).unwrap();
             let extract = extract_fragment($html, &opt.compile().unwrap());
-            println!("{:?}", toml::to_string(&extract).unwrap());
             let extract_value = toml::Value::try_from(extract).unwrap();
             let expect_value = toml::from_str($expect).unwrap();
             assert_eq!(extract_value, expect_value);
