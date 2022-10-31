@@ -60,7 +60,7 @@ pub enum ExtractText {
 pub struct ExtractItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     text: Option<ExtractText>,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(skip_serializing_if = "HashMap::is_empty", flatten)]
     items: HashMap<String, Extract>,
 }
 
@@ -133,130 +133,88 @@ pub fn extract_fragment(fragment: &str, opt: &ExtractOptCompled) -> Extract {
 mod tests {
     use super::*;
 
+    macro_rules! test_case {
+        (html:$html: literal, opt:$opt: literal, expect:$expect: literal) => {
+            let opt: ExtractOpt = toml::from_str($opt).unwrap();
+            let extract = extract_fragment($html, &opt.compile().unwrap());
+            println!("{:?}", toml::to_string(&extract).unwrap());
+            let extract_value = toml::Value::try_from(extract).unwrap();
+            let expect_value = toml::from_str($expect).unwrap();
+            assert_eq!(extract_value, expect_value);
+        };
+    }
+
     #[test]
     fn test_basis() {
-        let opt = ExtractOpt {
-            label: Some(Label::Attr("href".to_owned())),
-            selector: "a".to_owned(),
-            regex: None,
-            items: Default::default(),
+        test_case! {
+            html:"<a href=\"www.xxx.com\">",
+            opt:r#"
+                label = { type="Attr", index="href" }
+                selector = "a"
+            "#,
+            expect:"text = \"www.xxx.com\""
         };
-        let extract = extract_fragment("<a href=\"www.xxx.com\"/>", &opt.compile().unwrap());
-        match extract {
-            Extract::Item(ExtractItem {
-                text: Some(ExtractText::Text(text)),
-                ..
-            }) => {
-                assert_eq!(&text, "www.xxx.com")
-            }
-            _ => assert!(false),
-        }
     }
 
     #[test]
     fn test_recursive() {
-        let d_opt = ExtractOpt {
-            label: Some(Label::Text),
-            selector: "h2".to_owned(),
-            regex: None,
-            items: Default::default(),
-        };
-        let opt = ExtractOpt {
-            label: None,
-            selector: ".parent".to_owned(),
-            regex: None,
-            items: [("title".to_owned(), d_opt)].into_iter().collect(),
-        };
-
-        let extract = extract_document(
-            r#"
-<!DOCTYPE html>
+        test_case! {
+            html: r#"
 <div class="parent"> Hello, <h2>world!</h2> </div>
-<h2>Hello, world!</h2>
+<h2>Hello, world!</h2>               
             "#,
-            &opt.compile().unwrap(),
-        );
-        match extract {
-            Extract::Item(ExtractItem { items, .. }) => {
-                assert!(items.contains_key("title"));
+            opt: r#"
+                selector = ".parent"
 
-                match &items["title"] {
-                    Extract::Item(ExtractItem {
-                        text: Some(ExtractText::Text(text)),
-                        ..
-                    }) => {
-                        assert_eq!(text, "world!");
-                    }
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
+                [title]
+                label = { type="Text" }
+                selector = "h2"
+            "#,
+            expect: r#"
+                [title]        
+                text = "world!"
+            "#
+        };
     }
 
     #[test]
     fn test_list() {
-        let opt = ExtractOpt {
-            label: Some(Label::Text),
-            selector: ".parent".to_owned(),
-            regex: None,
-            items: Default::default(),
-        };
-        let extract = extract_document(
-            r#"
-<!DOCTYPE html>
-<div class="parent"> Hello, <h2>world!</h2> </div>
-<div class="parent"> Hello, <h2>world!</h2> </div>
-<div class="parent"> Hello, <h2>world!</h2> </div>
+        test_case! {
+            html: r#"
+<div class="parent"> Hello, <h2>w</h2>o<h2>r</h2>l<h2>d</h2>! </div>
             "#,
-            &opt.compile().unwrap(),
-        );
+            opt: r#"
+                selector = ".parent"
 
-        match extract {
-            Extract::ItemList(list) => {
-                assert_eq!(list.len(), 3);
-                let extract = &list[0];
-                match &extract.text {
-                    Some(ExtractText::Text(text)) => {
-                        assert_eq!(text, "Hello, world!");
-                    }
-                    _ => assert!(false),
-                }
-            }
-            _ => {
-                assert!(false)
-            }
-        }
+                [title]
+                label = { type="Text" }
+                selector = "h2"
+            "#,
+            expect: r#"
+                [[title]]
+                text = "w"
+                [[title]]
+                text = "r"
+                [[title]]
+                text = "d"
+            "#
+        };
     }
 
     #[test]
     fn test_capture() {
-        let opt = ExtractOpt {
-            label: Some(Label::Text),
-            selector: ".parent".to_owned(),
-            regex: Some("(.*?), (.*?)!".to_owned()),
-            items: Default::default(),
-        };
-        let extract = extract_document(
-            r#"
-<!DOCTYPE html>
+        test_case! {
+            html: r#"
 <div class="parent"> Hello, <h2>world!</h2> </div>
             "#,
-            &opt.compile().unwrap(),
-        );
-
-        match extract {
-            Extract::Item(ExtractItem {
-                text: Some(ExtractText::TextList(texts)),
-                ..
-            }) => {
-                assert_eq!(texts.len(), 2);
-                assert_eq!(&texts[0], "Hello");
-                assert_eq!(&texts[1], "world");
-            }
-            _ => {
-                assert!(false)
-            }
-        }
+            opt: r#"
+                label = { type = "Text" }
+                selector = ".parent"
+                regex = "(.*?), (.*?)!"
+            "#,
+            expect: r#"
+                text = ["Hello", "world"]
+            "#
+        };
     }
 }
