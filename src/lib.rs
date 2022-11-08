@@ -1,5 +1,8 @@
 //! A library to provide an easy way to extract data from HTML.
 
+#[cfg(feature = "cffi")]
+pub mod cffi;
+
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
@@ -18,16 +21,16 @@ pub struct ExtractOpt {
     pub items: HashMap<String, ExtractOpt>,
 }
 
-pub struct ExtractOptCompled {
+pub struct ExtractOptCompiled {
     pub target: Option<String>,
     pub selector: Selector,
     pub regex: Option<Regex>,
-    pub items: HashMap<String, ExtractOptCompled>,
+    pub items: HashMap<String, ExtractOptCompiled>,
 }
 
 impl ExtractOpt {
-    pub fn compile(self) -> Result<ExtractOptCompled> {
-        Ok(ExtractOptCompled {
+    pub fn compile(self) -> Result<ExtractOptCompiled> {
+        Ok(ExtractOptCompiled {
             target: self.target,
             selector: Selector::parse(&self.selector).map_err(|e| anyhow!("{:?}", e))?,
             regex: self.regex.map(|x| Regex::new(&x)).transpose()?,
@@ -65,7 +68,7 @@ pub enum Extract {
     ItemList(Vec<ExtractItem>),
 }
 
-fn extract_elem(elem: ElementRef, opt: &ExtractOptCompled) -> Extract {
+fn extract_elem(elem: ElementRef, opt: &ExtractOptCompiled) -> Extract {
     let select = elem.select(&opt.selector);
     let mut extract_items = vec![];
     for elem in select {
@@ -109,19 +112,19 @@ fn extract_elem(elem: ElementRef, opt: &ExtractOptCompled) -> Extract {
     }
 }
 
-fn extract_html(html: Html, opt: &ExtractOptCompled) -> Extract {
+fn extract_html(html: Html, opt: &ExtractOptCompiled) -> Extract {
     let root_elem = html.root_element();
     extract_elem(root_elem, opt)
 }
 
 /// Extract from a string of document.
-pub fn extract_document(document: &str, opt: &ExtractOptCompled) -> Extract {
+pub fn extract_document(document: &str, opt: &ExtractOptCompiled) -> Extract {
     let document = Html::parse_document(document);
     extract_html(document, opt)
 }
 
 /// Extract from a string of fragment.
-pub fn extract_fragment(fragment: &str, opt: &ExtractOptCompled) -> Extract {
+pub fn extract_fragment(fragment: &str, opt: &ExtractOptCompiled) -> Extract {
     let fragment = Html::parse_fragment(fragment);
     extract_html(fragment, opt)
 }

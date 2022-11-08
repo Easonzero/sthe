@@ -1,0 +1,4 @@
+language = "C"
+
+pragma_once = true
+usize_is_size_t = true
