@@ -77,6 +77,7 @@ fn extract_elem(elem: ElementRef, opt: &ExtractOptCompiled) -> Extract {
             .as_ref()
             .and_then(|target| match target.as_str() {
                 "html" => Some(elem.html()),
+                "inner_html" => Some(elem.inner_html()),
                 "text" => Some(elem.text().collect::<Vec<_>>().join("")),
                 attr => elem.value().attr(attr).map(|x| x.to_owned()),
             })

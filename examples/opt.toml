@@ -10,9 +10,6 @@ regex = "(^\\d+)."
 
 [items.title]
 selector = "span.titleline>a"
-target = "text"
+target = "inner_html"
 
-[items.link]
-selector = "span.titleline>a"
-target = "href"
 
