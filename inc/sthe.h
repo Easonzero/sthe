@@ -16,20 +16,22 @@ typedef enum RetCode {
   InvalidArgs,
 } RetCode;
 
-typedef struct ExtractOptCompled ExtractOptCompled;
+typedef struct ExtractOptCompiled ExtractOptCompiled;
 
-enum RetCode compile_opt(const char *_descp,
-                         enum DescpType _ty,
-                         const struct ExtractOptCompled **_opt);
+enum RetCode compile_opt(const char *descp,
+                         enum DescpType ty,
+                         const struct ExtractOptCompiled **out);
 
-void release_opt(const struct ExtractOptCompled *_opt);
+void release_opt(struct ExtractOptCompiled *opt);
 
-const char *extract_fragment(const char *_fragment,
-                             const struct ExtractOptCompled *_opt,
-                             enum DescpType _ty);
+enum RetCode extract_fragment(const char *fragment,
+                              const struct ExtractOptCompiled *opt,
+                              enum DescpType ty,
+                              const char **out);
 
-const char *extract_document(const char *_document,
-                             const struct ExtractOptCompled *_opt,
-                             enum DescpType _ty);
+enum RetCode extract_document(const char *document,
+                              const struct ExtractOptCompiled *opt,
+                              enum DescpType ty,
+                              const char **out);
 
-void release_extract(const char *_ret);
+void release_extract(char *ret);
