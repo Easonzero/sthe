@@ -2,8 +2,10 @@
 
 #[cfg(feature = "cffi")]
 pub mod cffi;
+mod one_or_list;
 
 use anyhow::{anyhow, Result};
+use one_or_list::*;
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -13,7 +15,7 @@ use std::collections::HashMap;
 #[derive(Deserialize)]
 pub struct ExtractOpt {
     #[serde(default)]
-    pub target: Option<String>,
+    pub target: OneOrList<String>,
     pub selector: String,
     #[serde(default)]
     pub regex: Option<String>,
@@ -22,7 +24,7 @@ pub struct ExtractOpt {
 }
 
 pub struct ExtractOptCompiled {
-    pub target: Option<String>,
+    pub target: OneOrList<String>,
     pub selector: Selector,
     pub regex: Option<Regex>,
     pub items: HashMap<String, ExtractOptCompiled>,
@@ -44,12 +46,7 @@ impl ExtractOpt {
 }
 
 /// The text extracted
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum ExtractText {
-    Text(String),
-    TextList(Vec<String>),
-}
+pub type ExtractText = OneOrList<String>;
 
 /// The item in result extracted
 #[derive(Serialize)]
@@ -61,43 +58,41 @@ pub struct ExtractItem {
 }
 
 /// The result extracted
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum Extract {
-    Item(ExtractItem),
-    ItemList(Vec<ExtractItem>),
-}
+pub type Extract = OneOrList<ExtractItem>;
 
 fn extract_elem(elem: ElementRef, opt: &ExtractOptCompiled) -> Extract {
     let select = elem.select(&opt.selector);
     let mut extract_items = vec![];
     for elem in select {
-        let text = opt
+        let text_list: Vec<_> = opt
             .target
-            .as_ref()
-            .and_then(|target| match target.as_str() {
+            .as_slice()
+            .iter()
+            .flat_map(|target| match target.as_str() {
                 "html" => Some(elem.html()),
                 "inner_html" => Some(elem.inner_html()),
                 "text" => Some(elem.text().collect::<Vec<_>>().join("")),
                 attr => elem.value().attr(attr).map(|x| x.to_owned()),
             })
-            .and_then(|text| {
+            .flat_map(|text| {
                 Some(if let Some(regex) = opt.regex.as_ref() {
-                    let captures: Vec<_> = regex
+                    regex
                         .captures(&text.trim())?
                         .iter()
                         .skip(1)
                         .flat_map(|x| x.map(|x| x.as_str().to_owned()))
-                        .collect();
-                    if captures.len() == 1 {
-                        ExtractText::Text(captures.into_iter().next().unwrap())
-                    } else {
-                        ExtractText::TextList(captures)
-                    }
+                        .collect()
                 } else {
-                    ExtractText::Text(text.trim().to_owned())
+                    vec![text.trim().to_owned()]
                 })
-            });
+            })
+            .flatten()
+            .collect();
+        let text = match text_list.len() {
+            0 => None,
+            1 => Some(ExtractText::One(text_list.into_iter().next().unwrap())),
+            _ => Some(ExtractText::List(text_list)),
+        };
         let items: HashMap<_, _> = opt
             .items
             .iter()
@@ -107,9 +102,9 @@ fn extract_elem(elem: ElementRef, opt: &ExtractOptCompiled) -> Extract {
     }
 
     if extract_items.len() == 1 {
-        Extract::Item(extract_items.into_iter().next().unwrap())
+        Extract::One(extract_items.into_iter().next().unwrap())
     } else {
-        Extract::ItemList(extract_items)
+        Extract::List(extract_items)
     }
 }
 
